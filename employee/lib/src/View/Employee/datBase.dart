@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:path/path.dart';
 import 'package:sample/src/Model/employeModel.dart';
 import 'package:sqflite/sqflite.dart';
@@ -9,7 +11,9 @@ import 'package:http/http.dart' as http;
 
 class DataBaseFile with ChangeNotifier {
   EmployeeModel employeeModel = EmployeeModel();
+  Data data = Data();
   late Database database;
+  int index = 0;
 
   init() {
     initDatabase();
@@ -20,8 +24,15 @@ class DataBaseFile with ChangeNotifier {
   Stream<List<Data>> get employeeStreamController =>
       _employeeStreamController.stream;
 
+  final _loadingStreamController = StreamController<bool>.broadcast();
+  Stream<bool> get loadingStreamController => _loadingStreamController.stream;
+
   Future<void> resetDatabase() async {
     await database.delete('employees');
+  }
+
+  loading(bool value) {
+    _loadingStreamController.sink.add(value);
   }
 
 // init dataBase
@@ -78,26 +89,47 @@ class DataBaseFile with ChangeNotifier {
     return employeeModel.data;
   }
 
-  Future<void> deleteEmployee(int employeeId) async {
+// delete employee
+  Future<void> deleteEmployee(int employeeId, String title) async {
     await database.delete(
       'employees',
       where: 'id = ?',
       whereArgs: [employeeId],
     );
+    Fluttertoast.showToast(
+        msg: title + " Successfully Deleted", backgroundColor: Colors.green);
     _employeeStreamController.sink.add(employeeModel.data!);
   }
 
-  Future<void> updateEmployee(int employeeId) async {
+// upadte employee
+  Future<void> updateEmployee(int employeeId, String title) async {
+    // log(data.toJson().toString());
     await database.update(
       'employees',
       {
-        "email": "test@gmail.com",
-        "firstName": "Test",
-        "lastName": "Testing",
+        "email": data.email,
+        "firstName": data.firstName,
+        "lastName": data.lastName,
+        "avatar": data.avatar,
       },
       where: 'id = ?',
       whereArgs: [employeeId],
     );
-    _employeeStreamController.sink.add(employeeModel.data!);
+    final List<Map<String, dynamic>> updatedDataFromDb = await database.query(
+      'employees',
+      where: 'id = ?',
+      whereArgs: [employeeId],
+    );
+    if (updatedDataFromDb.isNotEmpty) {
+      final Data updatedEmployee = Data.fromJsonTo(updatedDataFromDb.first);
+      final int index =
+          employeeModel.data!.indexWhere((e) => e.id == employeeId);
+      if (index != -1) {
+        employeeModel.data![index] = updatedEmployee;
+        _employeeStreamController.sink.add(employeeModel.data!);
+        Fluttertoast.showToast(
+            msg: title + " Successfully Edited", backgroundColor: Colors.green);
+      }
+    }
   }
 }

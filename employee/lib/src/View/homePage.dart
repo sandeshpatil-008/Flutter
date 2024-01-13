@@ -16,12 +16,13 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   EmployeeController employeeController = EmployeeController();
   EmployeeModel employeeModel = EmployeeModel();
-  bool isloading = true;
+  bool isloading = false;
   int _currentIndex = 0;
   DataBaseFile dataBaseFile = DataBaseFile();
 
   @override
   void initState() {
+    isloading = false;
     dataBaseFile.init();
     super.initState();
   }
@@ -48,7 +49,12 @@ class _HomePageState extends State<HomePage> {
                 backgroundColor: MaterialStateProperty.all<Color>(Colors.white),
               ),
               onPressed: () async {
-                await dataBaseFile.fetchData();
+                isloading = true;
+                setState(() {});
+                await Future.delayed(const Duration(seconds: 2));
+                dataBaseFile.refreshData();
+                isloading = false;
+                setState(() {});
               },
               child: const Text(
                 'Refresh',
@@ -65,6 +71,10 @@ class _HomePageState extends State<HomePage> {
         onTap: (index) {
           setState(() {
             _currentIndex = index;
+            if (_currentIndex == 0) {
+              dataBaseFile.loading(true);
+              dataBaseFile.refreshData();
+            }
           });
         },
         items: const [
@@ -92,11 +102,13 @@ class _HomePageState extends State<HomePage> {
             stream: dataBaseFile.employeeStreamController,
             builder: (context, snap) {
               if (snap.hasData) {
-                return Employee(
-                  dataBaseFile: dataBaseFile,
-                  data: snap.data!,
-                  callBack: callBack,
-                );
+                return isloading == true
+                    ? const Center(child: CircularProgressIndicator())
+                    : Employee(
+                        dataBaseFile: dataBaseFile,
+                        data: snap.data!,
+                        callBack: callBack,
+                      );
               } else {
                 return const Center(child: CircularProgressIndicator());
               }

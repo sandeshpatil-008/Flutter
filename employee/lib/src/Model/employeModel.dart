@@ -78,6 +78,15 @@ Data.fromJsonTo(Map<String, dynamic> json) {
     data['avatar'] = avatar;
     return data;
   }
+  Map<String, dynamic> toJsonTo() {
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['id'] = id;
+    data['email'] = email;
+    data['firstName'] = firstName;
+    data['lastName'] = lastName;
+    data['avatar'] = avatar;
+    return data;
+  }
 }
 
 class Support {
